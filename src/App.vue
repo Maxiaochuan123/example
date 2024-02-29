@@ -1,4 +1,11 @@
 <template>
+	<el-alert
+		class="recommendation"
+		title="我的个人建议"
+		type="success"
+		center
+		description="问题选项既然已经是必填项, 那么添加选项这个按钮似乎没有存在的意义, 没有必要先点一下再显示语言控件, 我是这样想的。"
+	/>
 	<el-form ref="ruleFormRef" :model="ruleForm" :rules="rules" class="demo-ruleForm">
 		<el-form-item label="问题类型" prop="questionType">
 			<el-select
@@ -51,8 +58,8 @@
 				placeholder="请输入问题选项"
 			>
 				<div class="question-options_operating-button">
-					<el-button size="small" @click="questionOptionsVisible = false">取消</el-button>
 					<el-button type="primary" size="small" @click="questionOptionsConfirm">确定</el-button>
+					<el-button size="small" @click="questionOptionsVisible = false">取消</el-button>
 				</div>
 			</LanguageControl>
 		</el-form-item>
@@ -214,6 +221,22 @@
 </script>
 
 <style scoped>
+	.recommendation {
+		margin-bottom: 20px;
+		/* background-color: rebeccapurple; */
+
+		::v-deep .el-alert__content {
+			background-color: rebeccapurple !important;
+		}
+
+		/* .el-alert__content ::v-deep .el-alert__title {
+			text-align: left;
+		} */
+	}
+	.recommendation /v-deep/ .el-alert__content {
+		background-color: rebeccapurple;
+	}
+
 	.demo-ruleForm {
 		width: 800px;
 		.el-form-item {

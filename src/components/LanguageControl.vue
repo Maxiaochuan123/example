@@ -4,7 +4,7 @@
 			<el-tab-pane
 				:label="item.label"
 				:name="item.name"
-				v-for="item in languageOptions"
+				v-for="item in LanguageOptions"
 				:key="item.name"
 			>
 				<el-form-item
@@ -18,6 +18,7 @@
 					]"
 				>
 					<el-input
+						:ref="(el) => setTextareaRef(el, item.name)"
 						v-model="_ruleForm[item.name]"
 						:placeholder="placeholder"
 						type="textarea"
@@ -31,8 +32,8 @@
 </template>
 
 <script setup>
-	import { computed, ref, reactive } from 'vue'
-	import { languageOptions } from '../enum/app'
+	import { computed, ref, reactive, nextTick } from 'vue'
+	import { LanguageOptions } from '../enum/app'
 
 	const props = defineProps({
 		activeName: {
@@ -82,7 +83,7 @@
 	})
 
 	const tabClick = () => {
-		ruleFormReset()
+		// ruleFormReset()
 	}
 
 	const ruleFormReset = () => {
@@ -93,18 +94,62 @@
 		return _ruleForm
 	}
 
+	const getItem = (key) => {
+		return _ruleForm[key]
+	}
+
 	// 设置当前 tab 值
 	const setItem = (key, value) => {
 		activeName.value = key
 		_ruleForm[key] = value
 	}
 
+	// 清空对应 activeName 对应 _ruleForm 的值
+	const clearItemValue = (key) => {
+		_ruleForm[key] = null
+	}
+
+	// 获取空数据项的 key
+	const getNullDataItemValidKey = () => {
+		for (const key in _ruleForm) {
+			if (!_ruleForm[key]) return key
+		}
+	}
+
+	// textarea 获取焦点
+	const textareaRefMap = ref({})
+
+	const getTextareaRefPrefix = (key) => {
+		return `textareaRef_${key}`
+	}
+
+	const setTextareaRef = (el, key) => {
+		if (el) textareaRefMap.value[getTextareaRefPrefix(key)] = el
+	}
+
+	const textareaFocusValid = (key) => {
+		textareaRefMap.value[getTextareaRefPrefix(key)].focus()
+	}
+	const switchErrorValidField = async (key) => {
+		activeName.value = key
+		await nextTick()
+
+		textareaFocusValid(key)
+
+		const validList = [ruleFormRef.value.validateField(key), validate()]
+		return Promise.all(validList)
+	}
+
+	// validate
 	const ruleFormRef = ref(null)
 
 	const validate = () => {
 		return new Promise((resolve, reject) => {
-			ruleFormRef.value.validate((valid) => {
+			ruleFormRef.value.validate(async (valid) => {
 				if (valid) {
+					const key = getNullDataItemValidKey()
+					if (key) await switchErrorValidField(key)
+
 					resolve(true)
 				} else {
 					reject(false)
@@ -113,7 +158,14 @@
 		})
 	}
 
-	defineExpose({ validate, getRuleFormData, setItem, ruleFormReset })
+	defineExpose({
+		validate,
+		getRuleFormData,
+		setItem,
+		getItem,
+		clearItemValue,
+		ruleFormReset
+	})
 </script>
 
 <style scoped>

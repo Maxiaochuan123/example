@@ -1,9 +1,9 @@
-export const questionOptions = [
+export const QuestionOptions = [
 	{ label: '类型A', value: 1 },
 	{ label: '类型B', value: 2 }
 ]
 
-export const languageOptions = [
+export const LanguageOptions = [
 	{
 		label: '中文',
 		name: 'zh'

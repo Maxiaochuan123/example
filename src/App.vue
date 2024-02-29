@@ -1,11 +1,4 @@
 <template>
-	<el-alert
-		class="mb-20"
-		title="我的个人建议"
-		type="info"
-		center
-		description="问题选项既然已经是必填项, 那么添加选项这个按钮似乎没有存在的意义, 没有必要先点一下再显示语言控件, 我是这样想的。"
-	/>
 	<el-form ref="ruleFormRef" :model="ruleForm" :rules="rules" class="demo-ruleForm">
 		<el-form-item label="问题类型" prop="questionType">
 			<el-select
@@ -13,7 +6,7 @@
 				v-model="ruleForm.questionType"
 				placeholder="请选择问题类型"
 			>
-				<el-option v-for="item in questionOptions" :label="item.label" :value="item.value" />
+				<el-option v-for="item in QuestionOptions" :label="item.label" :value="item.value" />
 			</el-select>
 		</el-form-item>
 		<el-form-item label="问题题目" required>
@@ -36,7 +29,7 @@
 				<el-button
 					type="success"
 					v-show="addQuestionOptionsBtnVisible"
-					@click="questionOptionsVisible = true"
+					@click="changeQuestionOptionsVisible(true)"
 					>添加选项</el-button
 				>
 			</div>
@@ -46,11 +39,11 @@
 					{ 'mb-20': questionOptionsLanguageControl_Mb20_Visible }
 				]"
 			>
-				<div class="items" v-for="item in ruleForm.questionOptions">
-					<div class="value">{{ getQuestionOptionValue(item) }}</div>
+				<div class="items" v-for="(item, index) in ruleForm.questionOptions">
+					<div class="value">{{ item.value }}</div>
 					<div class="operating-button">
-						<el-button type="primary" @click="editQuestionOptions(item)">编辑</el-button>
-						<el-button type="danger" @click="removeQuestionOptions(item)">删除</el-button>
+						<el-button type="primary" @click="editQuestionOptions(item, index)">编辑</el-button>
+						<el-button type="danger" @click="removeQuestionOptions(item, index)">删除</el-button>
 					</div>
 				</div>
 			</div>
@@ -64,7 +57,7 @@
 			>
 				<div class="question-options_operating-button">
 					<el-button type="primary" size="small" @click="questionOptionsConfirm">确定</el-button>
-					<el-button size="small" @click="questionOptionsVisible = false">取消</el-button>
+					<el-button size="small" @click="changeQuestionOptionsVisible(false)">取消</el-button>
 				</div>
 			</LanguageControl>
 		</el-form-item>
@@ -80,7 +73,7 @@
 
 <script setup>
 	import { ref, reactive, computed, nextTick } from 'vue'
-	import { questionOptions } from './enum/app'
+	import { QuestionOptions, LanguageOptions } from './enum/app'
 	import { ElMessage } from 'element-plus'
 	import LanguageControl from './components/LanguageControl.vue'
 
@@ -98,25 +91,29 @@
 		questionType: [{ required: true, message: '请选择问题类型', trigger: 'change' }]
 	})
 
-	let questionTitleActiveName = ref()
-	let questionOptionsActiveName = ref()
+	let questionTitleActiveName = ref('zh')
+	let questionOptionsActiveName = ref('zh')
 
 	/**
 	 * 问题选项
 	 */
+	let questionOptionsErrorMsg = ref(null)
+	let questionOptionsVisible = ref(false)
+
+	const changeQuestionOptionsVisible = (value) => {
+		questionOptionsVisible.value = value
+	}
 
 	// 语言控件底边距 Mb20 Visible
 	const questionOptionsLanguageControl_Mb20_Visible = computed(() => {
 		return questionOptionsVisible && ruleForm.questionOptions?.length >= 1
 	})
 
-	let questionOptionsErrorMsg = ref(null)
-	let questionOptionsVisible = ref(false)
-
 	// 错误状态
 	const questionOptionsErrorState = computed(() => {
-		if (isSubmit.value && ruleForm.questionOptions?.length === 0) {
-			questionOptionsErrorMsg.value = '问题选项不能为空，请点击确定至少添加一个选项'
+		if (isSubmit.value && ruleForm.questionOptions?.length < LanguageOptions.length) {
+			questionOptionsErrorMsg.value =
+				'选项不能为空，请点击添加按钮填写并点击确定按钮以添加问题选项，所有语言都要填写并添加'
 			return true
 		} else {
 			questionOptionsErrorMsg.value = null
@@ -126,14 +123,14 @@
 
 	// 添加按钮显示隐藏
 	const addQuestionOptionsBtnVisible = computed(() => {
-		return ruleForm.questionOptions?.length === 0 && !questionOptionsVisible.value ? true : false
+		return ruleForm.questionOptions?.length === 0 || !questionOptionsVisible.value ? true : false
 	})
 
 	// 数据格式化 - 取出 key 相等的当前项数据
 	const questionOptionsDataFormatter = (data) => {
 		let result = {}
 		Object.keys(data).forEach((key) => {
-			if (data[key]) {
+			if (questionOptionsActiveName.value === key && data[key]) {
 				result[key] = data[key]
 			}
 		})
@@ -142,12 +139,33 @@
 	}
 
 	// 确认后向 questionOptions push
-	const questionOptionsConfirm = () => {
+	const questionOptionsConfirm = async () => {
 		const data = questionOptionsRef.value.getRuleFormData()
 		const newData = questionOptionsDataFormatter(data)
-		Object.keys(newData).length && ruleForm.questionOptions.push(newData)
-		questionOptionsErrorMsg.value = null
-		questionOptionsRef.value.validate()
+
+		const { key, value } = questionOptionItemFormatter(newData)
+		if (!JSON.stringify(ruleForm.questionOptions).includes(questionOptionsActiveName.value)) {
+			if (Object.keys(newData).length && !JSON.stringify(ruleForm.questionOptions).includes(key)) {
+				ruleForm.questionOptions.push({
+					key,
+					value
+				})
+			}
+
+			questionOptionsErrorMsg.value = null
+		} else {
+			let editIndex = null
+			ruleForm.questionOptions.forEach((item, index) => {
+				if (item.key === questionOptionsActiveName.value) {
+					editIndex = index
+				}
+			})
+			ruleForm.questionOptions[editIndex].value = questionOptionsRef.value.getItem(
+				questionOptionsActiveName.value
+			)
+		}
+
+		await questionOptionsRef.value.validate()
 	}
 
 	// item 数据格式化-取出 key value
@@ -165,17 +183,13 @@
 
 	// 编辑
 	const editQuestionOptions = (item) => {
-		const { key, value } = questionOptionItemFormatter(item)
-		questionOptionsRef.value.setItem(key, value)
+		questionOptionsRef.value.setItem(item.key, item.value)
 	}
 
 	// 移除
-	const removeQuestionOptions = (item) => {
-		const { value } = questionOptionItemFormatter(item)
-		ruleForm.questionOptions = ruleForm.questionOptions.filter((f) => {
-			const { value: f_value } = questionOptionItemFormatter(f)
-			return f_value !== value
-		})
+	const removeQuestionOptions = (item, index) => {
+		ruleForm.questionOptions.splice(index, 1)
+		questionOptionsRef.value.clearItemValue(item.key)
 	}
 
 	/**
@@ -189,20 +203,20 @@
 	// languageControl 语言控件校验
 	const languageControlValid = () => {
 		const languageControlValidList = [
-			questionTitleRef.value.validate(),
-			questionOptionsRef.value.validate()
+			questionTitleRef.value?.validate(),
+			questionOptionsRef.value?.validate()
 		]
-		return Promise.all(languageControlValidList).then(() => true)
+		return Promise.all(languageControlValidList)
 	}
 
-	// submit
 	const submitForm = () => {
 		if (!ruleFormRef.value) return
 		isSubmit.value = true
 		ruleFormRef.value.validate(async (valid) => {
 			await nextTick()
-			const languageControlValidState = await languageControlValid()
-			if (valid && languageControlValidState && !questionOptionsErrorState.value) {
+			await languageControlValid()
+
+			if (valid && !questionOptionsErrorState.value) {
 				console.log('submit!', ruleForm)
 				openSubmitMessageBox()
 				isSubmit.value = false
@@ -215,8 +229,9 @@
 
 	// cancelSubmit
 	const cancelSubmit = () => {
-		ruleFormRef.value.resetFields()
 		isSubmit.value = false
+		ruleForm.questionOptions = []
+		ruleFormRef.value.resetFields()
 		questionTitleRef.value.ruleFormReset()
 		questionOptionsRef.value.ruleFormReset()
 	}

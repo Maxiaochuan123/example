@@ -1,8 +1,8 @@
 <template>
 	<el-alert
-		class="recommendation"
+		class="mb-20"
 		title="我的个人建议"
-		type="success"
+		type="info"
 		center
 		description="问题选项既然已经是必填项, 那么添加选项这个按钮似乎没有存在的意义, 没有必要先点一下再显示语言控件, 我是这样想的。"
 	/>
@@ -32,7 +32,7 @@
 			:error="questionOptionsErrorMsg"
 			:show-message="questionOptionsErrorState"
 		>
-			<div class="add-question-options-btn">
+			<div :class="{ 'mb-20': questionOptionsVisible }">
 				<el-button
 					type="success"
 					v-show="addQuestionOptionsBtnVisible"
@@ -40,7 +40,12 @@
 					>添加选项</el-button
 				>
 			</div>
-			<div class="question-options-value">
+			<div
+				:class="[
+					'question-options-value',
+					{ 'mb-20': questionOptionsLanguageControl_Mb20_Visible }
+				]"
+			>
 				<div class="items" v-for="item in ruleForm.questionOptions">
 					<div class="value">{{ getQuestionOptionValue(item) }}</div>
 					<div class="operating-button">
@@ -99,9 +104,14 @@
 	/**
 	 * 问题选项
 	 */
-	let questionOptionsErrorMsg = ref(null)
 
-	const questionOptionsVisible = ref(false)
+	// 语言控件底边距 Mb20 Visible
+	const questionOptionsLanguageControl_Mb20_Visible = computed(() => {
+		return questionOptionsVisible && ruleForm.questionOptions?.length >= 1
+	})
+
+	let questionOptionsErrorMsg = ref(null)
+	let questionOptionsVisible = ref(false)
 
 	// 错误状态
 	const questionOptionsErrorState = computed(() => {
@@ -116,7 +126,7 @@
 
 	// 添加按钮显示隐藏
 	const addQuestionOptionsBtnVisible = computed(() => {
-		return ruleForm.questionOptions.length === 0 && !questionOptionsVisible.value ? true : false
+		return ruleForm.questionOptions?.length === 0 && !questionOptionsVisible.value ? true : false
 	})
 
 	// 数据格式化 - 取出 key 相等的当前项数据
@@ -221,26 +231,14 @@
 </script>
 
 <style scoped>
-	.recommendation {
+	.mb-20 {
 		margin-bottom: 20px;
-		/* background-color: rebeccapurple; */
-
-		::v-deep .el-alert__content {
-			background-color: rebeccapurple !important;
-		}
-
-		/* .el-alert__content ::v-deep .el-alert__title {
-			text-align: left;
-		} */
-	}
-	.recommendation /v-deep/ .el-alert__content {
-		background-color: rebeccapurple;
 	}
 
 	.demo-ruleForm {
 		width: 800px;
 		.el-form-item {
-			margin-bottom: 20px;
+			margin-bottom: 30px;
 		}
 		.question-type-select {
 			width: 300px;
@@ -251,13 +249,8 @@
 			align-content: start;
 		}
 
-		.add-question-options-btn {
-			margin-bottom: 20px;
-		}
-
 		.question-options-value {
 			width: 100%;
-			margin-bottom: 20px;
 			.items {
 				width: 100%;
 				margin-bottom: 6px;
